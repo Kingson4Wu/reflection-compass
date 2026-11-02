@@ -1,0 +1,25 @@
+name: Verify application and split deployment
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run setup
+      - run: npm run format:check
+      - run: npm test
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:split
+      - run: npm run test:split -- --browser=webkit tests/browser/app-shell.spec.ts tests/browser/native-ui.spec.ts tests/browser/support.spec.ts tests/browser/experience-eval.spec.ts tests/browser/language.spec.ts
+      - run: npm run build
+      - run: npm run deploy:dry-run

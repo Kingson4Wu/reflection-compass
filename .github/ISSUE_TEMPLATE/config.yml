@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Kingson4Wu/reflection-compass/security/advisories/new
+    about: Report security issues privately; do not disclose them in public issues.
+  - name: Setup and documentation
+    url: https://github.com/Kingson4Wu/reflection-compass/blob/main/docs/README.md
+    about: Start here for local development, self-hosting, Google setup, and data handling.

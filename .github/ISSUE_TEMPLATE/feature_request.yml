@@ -1,0 +1,23 @@
+name: Feature request
+description: Propose a small improvement to action, reflection, or reliability.
+title: "idea: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What becomes difficult in the current workflow?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Smallest useful change
+      description: How would this help without adding a recurring burden?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and tradeoffs
+      description: Include simpler options, offline behavior, privacy, or compatibility considerations.

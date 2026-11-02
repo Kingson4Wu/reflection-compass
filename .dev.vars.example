@@ -1,0 +1,7 @@
+OWNER_TOKEN=replace-with-a-random-32-character-or-longer-secret
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:you@example.com
+
+# Frontend origins only, no repository path. Comma-separated.
+ALLOWED_ORIGINS=https://YOUR-USERNAME.github.io,https://compass.example.com

@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a reproducible problem without including private records.
+title: "bug: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use invented records and redact credentials, emails, and push endpoints.
+        For vulnerabilities, use the private reporting link in SECURITY.md.
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Start from a fresh state where possible and list the exact actions.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser/version, home-screen PWA or browser tab, and device language.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or deployment
+      description: Commit, hosted instance, or local setup. Do not include access credentials.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Additional evidence
+      description: Redacted screenshots, errors, network status, or whether it also happens offline.
