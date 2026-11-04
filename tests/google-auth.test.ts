@@ -98,3 +98,78 @@ it("limits challenge generation within one minute", async () => {
     clock.mockRestore();
   }
 });
+
+it("reuses an installation per account across Google logins without losing its subscription", async () => {
+  const { finishGoogleLogin } = await import("../worker/google-auth");
+  const { privateKey, publicKey } = await generateKeyPair("RS256");
+  const jwk = await exportJWK(publicKey);
+  jwk.kid = "login";
+  const keys = createLocalJWKSet({ keys: [jwk] });
+  const DB = await database();
+  const login = async (
+    deviceKey: string,
+    email = "owner@gmail.com",
+    sub = "owner-sub",
+    link = false,
+  ) => {
+    const verifier = "a".repeat(64);
+    const challenge = await createChallenge(
+      DB,
+      verifier,
+      link,
+      crypto.randomUUID(),
+    );
+    const credential = await new SignJWT({
+      sub,
+      email,
+      email_verified: true,
+      nonce: challenge.nonce,
+    })
+      .setProtectedHeader({ alg: "RS256", kid: "login" })
+      .setIssuedAt()
+      .setIssuer("https://accounts.google.com")
+      .setAudience("client")
+      .setExpirationTime("5m")
+      .sign(privateKey);
+    return finishGoogleLogin(
+      DB,
+      "client",
+      {
+        challengeId: challenge.id,
+        verifier,
+        credential,
+        name: "iPhone",
+        deviceKey,
+      },
+      keys,
+    );
+  };
+  const first = await login("a".repeat(64), undefined, undefined, true);
+  await DB.prepare("UPDATE devices SET subscription=? WHERE id=?")
+    .bind('{"endpoint":"https://web.push.apple.com/existing"}', first.id)
+    .run();
+  const again = await login("a".repeat(64));
+  expect(again.id).toBe(first.id);
+  expect(again.token).not.toBe(first.token);
+  expect((await DB.prepare("SELECT count(*) n FROM devices").first())?.n).toBe(
+    1,
+  );
+  expect(
+    (
+      await DB.prepare("SELECT subscription FROM devices WHERE id=?")
+        .bind(again.id)
+        .first()
+    )?.subscription,
+  ).toContain("existing");
+  expect(again.expiresAt - Date.now()).toBeGreaterThan(29 * 86400000);
+  const otherInstall = await login("b".repeat(64));
+  expect(otherInstall.id).not.toBe(first.id);
+  const { inviteMember } = await import("../worker/members");
+  await inviteMember(DB, "member@gmail.com");
+  const otherAccount = await login(
+    "a".repeat(64),
+    "member@gmail.com",
+    "member-sub",
+  );
+  expect(otherAccount.id).not.toBe(first.id);
+});

@@ -1,4 +1,18 @@
 export const en: Record<string, string> = {
+  "请先连接当前设备，再测试通知。":
+    "Connect this device before testing notifications.",
+  旧版提醒订阅: "Legacy reminder subscription",
+  "列表记录的是应用登录身份，同一台手机的旧登录可能单独列出；设备名称不代表不同的实体手机。":
+    "This list shows app sign-ins. Older sign-ins on the same phone may appear separately; names do not identify distinct physical phones.",
+  "旧版提醒订阅尚未关联当前登录。请在当前设备开启通知，再将其设为提醒设备。":
+    "The legacy subscription is not linked to this sign-in. Enable notifications on this device, then select it to receive reminders.",
+  "此设备已开启通知，日常提醒仍发往之前的订阅。可在下方切换到这台设备。":
+    "Notifications are enabled here. Daily reminders still go to the previous subscription. You can switch to this device below.",
+  "当前设备尚未接收日常提醒。":
+    "This device is not selected for daily reminders yet.",
+  将提醒切换到这台设备: "Send daily reminders to this device",
+  "请先登录，再开启或测试这台设备的通知。":
+    "Sign in to enable or test notifications on this device.",
   "{0} 天 · {1} 项行动 · {2} 条反思":
     "Days: {0} · Actions: {1} · Reflections: {2}",
   "仅用于这台设备。你的记录保留原文。":

@@ -20,6 +20,7 @@ import {
   saveSubscription,
   updateSubscriptionLocale,
   removeSubscription,
+  invalidateSubscription,
   removeDevice,
 } from "./devices";
 import {
@@ -118,11 +119,14 @@ export async function handleRequest(req: Request, env: Env): Promise<Response> {
     );
   }
 }
-async function readSmallBody(req: Request) {
+async function readSmallBody(req: Request, allowEmpty = false) {
   if (Number(req.headers.get("Content-Length") ?? 0) > 20000)
     throw new ApiError("请求过大。", 413);
   const reader = req.body?.getReader();
-  if (!reader) throw new ApiError("缺少请求内容。");
+  if (!reader) {
+    if (allowEmpty) return {};
+    throw new ApiError("缺少请求内容。");
+  }
   let size = 0;
   const chunks: Uint8Array[] = [];
   while (true) {
@@ -135,6 +139,7 @@ async function readSmallBody(req: Request) {
     }
     chunks.push(value);
   }
+  if (allowEmpty && size === 0) return {};
   const bytes = new Uint8Array(size);
   let offset = 0;
   for (const chunk of chunks) {
@@ -359,9 +364,21 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
       return json({ ok: true });
     }
     if (url.pathname === "/api/push/test" && req.method === "POST") {
-      const row = await DB.prepare(
-        "SELECT body FROM subscription WHERE id=1",
-      ).first<{ body: string }>();
+      const input = z
+        .object({ currentDevice: z.boolean().optional() })
+        .parse(await readSmallBody(req, true));
+      if (input.currentDevice && !auth.deviceId)
+        return json({ error: "请先连接当前设备，再测试通知。" }, 400);
+      const row =
+        input.currentDevice && auth.deviceId
+          ? await DB.prepare(
+              "SELECT subscription AS body FROM devices WHERE id=? AND subscription IS NOT NULL",
+            )
+              .bind(auth.deviceId)
+              .first<{ body: string }>()
+          : await DB.prepare("SELECT body FROM subscription WHERE id=1").first<{
+              body: string;
+            }>();
       if (!row) return json({ error: "请先在这台设备开启通知。" }, 400);
       let response: Response;
       try {
@@ -388,11 +405,7 @@ async function handleApi(req: Request, env: Env): Promise<Response> {
         );
       }
       if (response.status === 404 || response.status === 410)
-        await DB.prepare(
-          "DELETE FROM subscription WHERE json_extract(body,'$.endpoint')=json_extract(?,'$.endpoint') AND json_extract(body,'$.keys.p256dh')=json_extract(?,'$.keys.p256dh') AND json_extract(body,'$.keys.auth')=json_extract(?,'$.keys.auth')",
-        )
-          .bind(row.body, row.body, row.body)
-          .run();
+        await invalidateSubscription(DB, row.body);
       return response.ok
         ? json({ accepted: true })
         : json(
@@ -552,11 +565,7 @@ export async function runSchedule(
       else {
         error = `HTTP ${response.status}`;
         if ([404, 410].includes(response.status)) {
-          await env.DB.prepare(
-            "DELETE FROM subscription WHERE json_extract(body,'$.endpoint')=json_extract(?,'$.endpoint') AND json_extract(body,'$.keys.p256dh')=json_extract(?,'$.keys.p256dh') AND json_extract(body,'$.keys.auth')=json_extract(?,'$.keys.auth')",
-          )
-            .bind(active.body, active.body, active.body)
-            .run();
+          await invalidateSubscription(env.DB, active.body);
           status = "failed";
         } else if (response.status < 500 && response.status !== 429)
           status = "failed";

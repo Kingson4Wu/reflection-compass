@@ -29,6 +29,8 @@ The default Worker configuration enables observability. Hosting providers can re
 
 Signing out revokes the active local login state and switches to a separate guest workspace. It does not erase previously downloaded account records or pending edits. A separate browser profile is a better boundary for private writing on a shared computer. Removing a device blocks future cloud access but cannot remotely wipe copies already downloaded there.
 
+When you choose to remember a device, the app stores its session in localStorage and IndexedDB so it can restore a missing Web Storage copy. Signing out clears both remembered login copies. A private random installation identifier remains across sign-out to prevent duplicate device records; the server derives an account-specific ID from it after Google verification. It is separate from the session credential and does not itself permit sign-in.
+
 A browser may retain a device session until expiry or revocation. The recovery token is a privileged emergency credential; keep it private and out of frontend configuration. If credentials are exposed, follow [SECURITY.md](../SECURITY.md) and revoke affected access.
 
 ## Backups and retention

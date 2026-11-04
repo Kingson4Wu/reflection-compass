@@ -102,6 +102,7 @@ export async function finishGoogleLogin(
   DB: D1Database,
   clientId: string,
   input: unknown,
+  keys: JWTVerifyGetKey = googleKeys,
 ) {
   const value = z
     .object({
@@ -109,6 +110,10 @@ export async function finishGoogleLogin(
       verifier: z.string().regex(/^[a-f0-9]{64}$/),
       credential: z.string().max(16000),
       name: z.string().trim().min(1).max(80),
+      deviceKey: z
+        .string()
+        .regex(/^[a-f0-9]{64}$/)
+        .optional(),
     })
     .parse(input);
   const challenge = await consumeChallenge(
@@ -122,13 +127,18 @@ export async function finishGoogleLogin(
       value.credential,
       clientId,
       challenge.nonce,
+      keys,
     );
   } catch (error) {
     if (error instanceof ApiError) throw error;
     throw new ApiError("Google 登录验证失败，请重试。", 401);
   }
   const account = await acceptIdentity(DB, identity, !!challenge.owner_link);
-  const id = crypto.randomUUID();
+  // Hash the private installation secret with the verified account identity.
+  // A public device ID or name alone must never allow session replacement.
+  const id = value.deviceKey
+    ? await hashSecret(account.id + ":" + value.deviceKey)
+    : crypto.randomUUID();
   const device = await registerDevice(
     privateDatabase(DB, account.seat, account.id),
     { owner: true },

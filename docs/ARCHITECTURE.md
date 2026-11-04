@@ -27,7 +27,9 @@ The cloud database is authoritative for cross-device state. Browser storage is a
 
 ## Identity and five-person tenancy
 
-Google Identity Services supplies a signed ID credential. The backend validates it against the configured Web client and a server-created challenge; the frontend does not hold an OAuth client secret. Application-issued device sessions expire and can be revoked. Device session credentials are stored as hashes server-side.
+Google Identity Services supplies a signed ID credential. The backend validates it against the configured Web client and a server-created challenge; the frontend does not hold an OAuth client secret. Application-issued device sessions expire after 30 days and can be revoked. Device session credentials are stored as hashes server-side. A private random installation secret is stored separately from login state; after Google verification, the server hashes it with the account ID to reuse the device identity across repeated logins. Device names are never used to merge records. Older clients without an installation secret keep their existing login behavior.
+
+Remembered login state is stored in localStorage and IndexedDB. Startup restores the IndexedDB copy only when no explicit Web Storage login/logout state exists, before opening an account workspace. Signing out or choosing a session-only login clears the remembered backup. The installation secret remains across sign-out; clearing all site data creates a new installation.
 
 One administrator and four additional seats share an instance. Invitations reserve a seat for seven days. Initial admission requires the invited Gmail or Google Workspace identity; subsequent access is tied to the stable Google subject. Public registration and Apple sign-in are outside the current scope.
 
@@ -38,6 +40,8 @@ The administrator recovery token remains an emergency capability. Ordinary accou
 ## Reminder lifecycle
 
 Cloudflare Cron runs independently of open app windows. It evaluates explicit account timezone, daily slots, quiet hours, and pause settings. Scheduling is calendar-aware rather than based on adding a fixed number of seconds to a day.
+
+Testing notifications from the current app uses that authenticated device’s own subscription, even when another subscription receives daily reminders. Enabling notifications refreshes the device list and offers an explicit target switch. Provider rejection of an expired subscription clears both delivery and matching device metadata, while preserving any renewed keys.
 
 Each account selects one receiving device. Registering another device does not automatically take over the target. Pending delivery rows have IDs, expiry, attempts, and leases. Leases coordinate overlapping runs and permit recovery after a worker interruption; retries are bounded. Successful upstream acceptance is recorded as `accepted`, not displayed or read. Network failures can still cause duplicates; this is not exactly-once delivery.
 

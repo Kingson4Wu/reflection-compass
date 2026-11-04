@@ -46,8 +46,10 @@ export function DeviceSettings({
   setName,
   onRename,
   onLogout,
+  refreshKey = 0,
 }: {
   token: string;
+  refreshKey?: number;
   id: string;
   name: string;
   setName: (value: string) => void;
@@ -58,8 +60,16 @@ export function DeviceSettings({
   const [list, setList] = useState<DeviceList | null>(null),
     [feedback, setFeedback] = useState(""),
     [busy, setBusy] = useState(false);
+  const refreshGeneration = useRef(0);
   async function refresh() {
-    if (token) setList(await api("devices", token));
+    const generation = ++refreshGeneration.current;
+    if (!token) return;
+    try {
+      const result = await api("devices", token);
+      if (generation === refreshGeneration.current) setList(result);
+    } catch (error) {
+      if (generation === refreshGeneration.current) throw error;
+    }
   }
   useEffect(() => {
     if (!token) {
@@ -69,7 +79,10 @@ export function DeviceSettings({
     void refresh().catch(() =>
       setFeedback(t("设备列表暂时不可用，请重新连接后刷新。")),
     );
-  }, [token]);
+    return () => {
+      refreshGeneration.current++;
+    };
+  }, [token, refreshKey]);
   async function perform(fn: () => Promise<void>, refreshAfter = true) {
     setBusy(true);
     try {
@@ -86,6 +99,18 @@ export function DeviceSettings({
     <details className="card settings-disclosure">
       <summary>{t("设备管理")}</summary>
       <p className="hint">{t("提醒只发往选定的一台设备。")}</p>
+      <p className="hint">
+        {t(
+          "列表记录的是应用登录身份，同一台手机的旧登录可能单独列出；设备名称不代表不同的实体手机。",
+        )}
+      </p>
+      {list?.targetId === "legacy-phone" && (
+        <p className="hint">
+          {t(
+            "旧版提醒订阅尚未关联当前登录。请在当前设备开启通知，再将其设为提醒设备。",
+          )}
+        </p>
+      )}
       <label className="field">
         <span>{t("这台设备的名称")}</span>
         <input
@@ -115,7 +140,7 @@ export function DeviceSettings({
         <div className="device-row" key={device.id}>
           <div>
             <strong>
-              {device.name}
+              {device.id === "legacy-phone" ? t("旧版提醒订阅") : device.name}
               {device.id === id ? t("（当前）") : ""}
             </strong>
             <p className="hint">

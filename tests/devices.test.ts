@@ -80,3 +80,49 @@ it("new device login and notification subscription do not steal the existing pho
   await selectTarget(DB, "device-macbook");
   expect((await listDevices(DB)).targetId).toBe("device-macbook");
 });
+
+it("clears invalid subscriptions from both the receiving target and device controls", async () => {
+  const { invalidateSubscription } = await import("../worker/devices");
+  const DB = await db();
+  await registerDevice(
+    DB,
+    { owner: true },
+    { id: "phone-current", name: "Phone" },
+  );
+  const body = JSON.stringify({
+    endpoint: "https://web.push.apple.com/invalid",
+    keys: { p256dh: "key", auth: "auth" },
+  });
+  await saveSubscription(DB, { owner: false, deviceId: "phone-current" }, body);
+  await invalidateSubscription(DB, body);
+  const list = await listDevices(DB, "phone-current");
+  expect(list.targetId).toBeNull();
+  expect(list.devices[0].subscribed).toBe(false);
+});
+
+it("does not erase renewed keys or another target when an older subscription is rejected", async () => {
+  const { invalidateSubscription } = await import("../worker/devices");
+  const DB = await db();
+  await registerDevice(
+    DB,
+    { owner: true },
+    { id: "phone-current", name: "Phone" },
+  );
+  const old = JSON.stringify({
+    endpoint: "https://web.push.apple.com/same",
+    keys: { p256dh: "old", auth: "old" },
+  });
+  const renewed = JSON.stringify({
+    endpoint: "https://web.push.apple.com/same",
+    keys: { p256dh: "new", auth: "new" },
+  });
+  await saveSubscription(
+    DB,
+    { owner: false, deviceId: "phone-current" },
+    renewed,
+  );
+  await invalidateSubscription(DB, old);
+  const list = await listDevices(DB, "phone-current");
+  expect(list.targetId).toBe("phone-current");
+  expect(list.devices[0].subscribed).toBe(true);
+});

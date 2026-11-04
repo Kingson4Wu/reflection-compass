@@ -36,13 +36,15 @@ Sign into the same Google account on another device and wait for **Synced to clo
 
 Signing out switches to a separate guest workspace. Previously saved account records and its pending queue remain in that browser's account workspace. Unsaved Pause and add-action drafts are temporary and clear when switching accounts. Avoid shared browser profiles for private writing; see [privacy](PRIVACY.md).
 
+Choose **Remember this device after connecting** before signing in to retain a session across app restarts. Sessions last 30 days unless revoked. Remembered credentials have a second local copy alongside app storage; signing out clears both login copies without deleting your saved writing. Clearing all website data can remove records and login state together.
+
 ## Enable reminders when useful
 
 Reminders start paused. Set your timezone, daily times, quiet hours, and receiving device in Settings; changes take effect on the server after successful sync. Equal quiet-hour start and end times mean no quiet interval.
 
-On iPhone, install the PWA and open it from its home-screen icon before granting notification permission. Turn on notifications from a direct button press. A newly connected device does not replace an existing receiving device; select it in **Device management** when you want to switch.
+On iPhone, install the PWA and open it from its home-screen icon before granting notification permission. Turn on notifications from a direct button press. A newly connected device does not replace an existing receiving device. After enabling notifications, use the adjacent switch button or **Device management** to choose it for daily reminders. A legacy subscription is an older unlinked subscription, not proof of an additional physical phone. Repeated Google logins from the same installation reuse its device identity; older duplicate login records can be removed manually.
 
-Use **Notification diagnostics → Send test reminder**, then check the lock screen or notification center. A push service accepting a request does not prove the operating system displayed it. Focus modes, permissions, connectivity, expiry, and platform restrictions can affect delivery. Closing the app does not stop server scheduling; pausing and syncing does. Already-sent notifications cannot be recalled.
+Use **Notification diagnostics → Send test reminder** to test the current signed-in device, then check the lock screen or notification center. This does not change which device receives daily reminders. A push service accepting a request does not prove the operating system displayed it. Focus modes, permissions, connectivity, expiry, and platform restrictions can affect delivery. Closing the app does not stop server scheduling; pausing and syncing does. Already-sent notifications cannot be recalled.
 
 ## Back up and restore
 

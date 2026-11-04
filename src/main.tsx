@@ -21,7 +21,7 @@ import {
   type State,
   type Day,
 } from "./domain";
-import { api } from "./store";
+import { api, request } from "./store";
 import { useNotificationLanguage } from "./use-notification-language";
 import { useLanguage } from "./use-language";
 import { LanguageSettings } from "./LanguageSettings";
@@ -147,6 +147,8 @@ function App() {
     >([]);
   const activeAccount = useRef(accountId);
   activeAccount.current = accountId;
+  const activeToken = useRef(token);
+  activeToken.current = token;
   const pushFeedbackRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setAnswer("");
@@ -154,6 +156,7 @@ function App() {
     setAction("");
     setHistory([]);
     setPushFeedback("");
+    setNeedsTarget(false);
   }, [accountId]);
   useEffect(() => {
     if (pushFeedback)
@@ -169,18 +172,26 @@ function App() {
       setBusy(false);
     }
   }
+  const [deviceRevision, setDeviceRevision] = useState(0);
+  const [needsTarget, setNeedsTarget] = useState(false);
   async function testPush() {
+    const forToken = token;
     setBusy(true);
     setPushFeedback(t("正在发送测试提醒…"));
     try {
       if (!token) throw new Error(t("请先连接个人云端。"));
-      await api("push/test", token, { method: "POST" });
+      await api("push/test", token, {
+        method: "POST",
+        body: JSON.stringify({ currentDevice: true }),
+      });
+      if (activeToken.current !== forToken) return;
       setPushFeedback(
         t(
           "推送服务已接受请求。请检查锁屏或通知中心；这不代表设备已经展示通知。",
         ),
       );
     } catch (error) {
+      if (activeToken.current !== forToken) return;
       setPushFeedback(
         error instanceof Error ? error.message : t("测试推送失败，请重试。"),
       );
@@ -189,15 +200,18 @@ function App() {
     }
   }
   async function notifications() {
+    const forToken = token;
     if (!token) throw new Error(t("请先连接个人云端。"));
     if (!("PushManager" in window) || !("Notification" in window))
       throw new Error(
         t("此浏览器暂不支持通知。iPhone 请先添加到主屏幕，并从图标打开。"),
       );
     const permission = await Notification.requestPermission();
+    if (activeToken.current !== forToken) return;
     if (permission !== "granted")
       throw new Error(t("通知未授权。请在系统设置中允许通知，然后重试。"));
     const config = await api("config", token);
+    if (activeToken.current !== forToken) return;
     if (!config.pushReady)
       throw new Error(t("云端尚未配置通知密钥，请按 README 完成设置。"));
     const registration = await navigator.serviceWorker.ready;
@@ -214,16 +228,20 @@ function App() {
         userVisibleOnly: true,
         applicationServerKey: key,
       }));
+    if (activeToken.current !== forToken) return;
     const subscriptionResult = await api("subscription", token, {
       method: "POST",
       body: JSON.stringify({ ...sub.toJSON(), locale: getLanguage() }),
     });
+    if (activeToken.current !== forToken) return;
+    setNeedsTarget(!subscriptionResult.target);
+    setDeviceRevision((value) => value + 1);
     notificationLanguage.reconcile();
     setPushFeedback(
       subscriptionResult.target
         ? t("当前设备已开启通知并接收提醒。可发送测试确认。")
         : t(
-            "此设备已开启通知，现有手机仍接收提醒。需要切换时请在“设备管理”中选择。",
+            "此设备已开启通知，日常提醒仍发往之前的订阅。可在下方切换到这台设备。",
           ),
     );
   }
@@ -586,6 +604,14 @@ function App() {
                     onConnected={googleConnected}
                     onLogout={logout}
                   />
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={remember}
+                      onChange={(event) => setRemember(event.target.checked)}
+                    />
+                    {t("连接后记住此设备")}
+                  </label>
                   {(!user || user.role === "admin") && (
                     <details className="recovery-login">
                       <summary>{t("管理员恢复入口")}</summary>
@@ -611,16 +637,6 @@ function App() {
                           {t("连接并同步")}
                         </button>
                       </form>
-                      <label className="toggle">
-                        <input
-                          type="checkbox"
-                          checked={remember}
-                          onChange={(event) =>
-                            setRemember(event.target.checked)
-                          }
-                        />
-                        {t("连接后记住此设备")}
-                      </label>
                     </details>
                   )}
                   <p className="hint">
@@ -644,6 +660,7 @@ function App() {
                 <DeviceSettings
                   key={"devices:" + (accountId ?? "legacy-owner")}
                   token={token}
+                  refreshKey={deviceRevision}
                   id={deviceId}
                   name={deviceName}
                   setName={setDeviceName}
@@ -783,9 +800,42 @@ function App() {
                       )}
                     </p>
                   </details>
+                  <div role="status" aria-live="polite" className="hint">
+                    {needsTarget && t("当前设备尚未接收日常提醒。")}
+                  </div>
+                  {needsTarget && (
+                    <button
+                      disabled={!token || busy}
+                      onClick={() =>
+                        void perform(async () => {
+                          const forToken = token;
+                          await request("devices/target", token, {
+                            method: "POST",
+                            body: JSON.stringify({ id: deviceId }),
+                          });
+                          if (activeToken.current !== forToken) return;
+                          setNeedsTarget(false);
+                          setDeviceRevision((value) => value + 1);
+                          setPushFeedback(t("提醒设备已切换。"));
+                        })
+                      }
+                    >
+                      {t("将提醒切换到这台设备")}
+                    </button>
+                  )}
+                  {pushFeedback && (
+                    <p role="status" className="hint">
+                      {t(pushFeedback)}
+                    </p>
+                  )}
+                  {!token && (
+                    <p className="hint">
+                      {t("请先登录，再开启或测试这台设备的通知。")}
+                    </p>
+                  )}
                   <div className="buttons">
                     <button
-                      disabled={!token}
+                      disabled={!token || busy}
                       onClick={() => void perform(notifications)}
                     >
                       {t("在这台设备开启通知")}
@@ -801,6 +851,8 @@ function App() {
                             await navigator.serviceWorker.ready
                           ).pushManager.getSubscription();
                           await sub?.unsubscribe();
+                          setNeedsTarget(false);
+                          setDeviceRevision((value) => value + 1);
                           setMessage(t("已停止设备推送。"));
                         })
                       }
@@ -823,7 +875,10 @@ function App() {
                     </div>
                   )}
 
-                  <button disabled={!token} onClick={() => void testPush()}>
+                  <button
+                    disabled={!token || busy}
+                    onClick={() => void testPush()}
+                  >
                     {t("发送测试提醒")}
                   </button>
                   <button

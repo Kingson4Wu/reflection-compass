@@ -26,7 +26,7 @@ export async function listDevices(DB: PrivateDatabase, current?: string) {
   if (legacy && targetId === "legacy-phone")
     devices.push({
       id: "legacy-phone",
-      name: "原有提醒设备",
+      name: "旧版提醒订阅",
       last_seen: 0,
       subscribed: true,
       current: false,
@@ -192,4 +192,27 @@ export async function updateSubscriptionLocale(
     ).bind(locale, auth.deviceId, auth.deviceId),
   ]);
   return { updated: results[0].meta.changes > 0 };
+}
+
+// Remove only the exact subscription rejected by the push provider: a device may
+// already have renewed its keys while an older delivery was in flight.
+export async function invalidateSubscription(
+  DB: PrivateDatabase,
+  body: string,
+) {
+  const matches = (column: string) =>
+    `json_extract(${column},'$.endpoint')=json_extract(?,'$.endpoint') AND json_extract(${column},'$.keys.p256dh')=json_extract(?,'$.keys.p256dh') AND json_extract(${column},'$.keys.auth')=json_extract(?,'$.keys.auth')`;
+  await DB.batch([
+    DB.prepare(`DELETE FROM subscription WHERE ${matches("body")}`).bind(
+      body,
+      body,
+      body,
+    ),
+    DB.prepare(
+      `UPDATE devices SET subscription=NULL WHERE ${matches("subscription")}`,
+    ).bind(body, body, body),
+    DB.prepare(
+      "DELETE FROM notification_target WHERE NOT EXISTS(SELECT 1 FROM subscription WHERE id=1)",
+    ),
+  ]);
 }

@@ -210,3 +210,78 @@ describe("server reminders independent of open app", () => {
     ).toBe(0);
   });
 });
+
+it("tests the requesting device rather than silently sending to the legacy target", async () => {
+  const { DB, env } = await setup();
+  const { registerDevice, saveSubscription } =
+    await import("../worker/devices");
+  const device = await registerDevice(
+    DB,
+    { owner: true },
+    { id: "current-phone", name: "iPhone" },
+  );
+  const legacy = (await DB.prepare("SELECT body FROM subscription").first<{
+    body: string;
+  }>())!;
+  const sub = {
+    ...JSON.parse(legacy.body),
+    endpoint: "https://web.push.apple.com/current",
+  };
+  await saveSubscription(
+    DB,
+    { owner: false, deviceId: device.id },
+    JSON.stringify(sub),
+  );
+  const send = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
+  vi.stubGlobal("fetch", send);
+  const response = await handleRequest(
+    new Request("https://app.test/api/push/test", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + device.token },
+      body: JSON.stringify({ currentDevice: true }),
+    }),
+    env,
+  );
+  expect(response.status).toBe(200);
+  expect(send.mock.calls[0][0]).toBe(sub.endpoint);
+  expect(
+    (await DB.prepare("SELECT body FROM subscription").first())?.body,
+  ).toBe(legacy.body);
+});
+it("does not send a current-device test to another phone when this device has no subscription", async () => {
+  const { DB, env } = await setup();
+  const { registerDevice } = await import("../worker/devices");
+  const device = await registerDevice(
+    DB,
+    { owner: true },
+    { id: "current-phone", name: "iPhone" },
+  );
+  const send = vi.fn();
+  vi.stubGlobal("fetch", send);
+  const response = await handleRequest(
+    new Request("https://app.test/api/push/test", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + device.token },
+      body: JSON.stringify({ currentDevice: true }),
+    }),
+    env,
+  );
+  expect(response.status).toBe(400);
+  expect(send).not.toHaveBeenCalled();
+});
+
+it("requires a registered device for an explicit current-device test even with the recovery credential", async () => {
+  const { env } = await setup();
+  const send = vi.fn();
+  vi.stubGlobal("fetch", send);
+  const response = await handleRequest(
+    new Request("https://app.test/api/push/test", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + env.OWNER_TOKEN },
+      body: JSON.stringify({ currentDevice: true }),
+    }),
+    env,
+  );
+  expect(response.status).toBe(400);
+  expect(send).not.toHaveBeenCalled();
+});

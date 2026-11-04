@@ -2,6 +2,7 @@ import { t } from "./i18n";
 import { useLanguage } from "./use-language";
 import { useEffect, useRef, useState } from "react";
 import { request } from "./store";
+import { installationKey } from "./auth-storage";
 import type { GoogleSession, User } from "./account";
 interface GoogleId {
   initialize(options: {
@@ -91,6 +92,7 @@ export function GoogleLogin({
     setError("");
     const gen = ++generation.current;
     try {
+      const deviceKey = await installationKey();
       const verifier = Array.from(
         crypto.getRandomValues(new Uint8Array(32)),
         (byte) => byte.toString(16).padStart(2, "0"),
@@ -115,6 +117,7 @@ export function GoogleLogin({
               challengeId: challenge.id,
               verifier,
               credential,
+              deviceKey,
               name: name.trim() || t("我的设备"),
             }),
           })

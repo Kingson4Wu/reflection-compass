@@ -1,8 +1,14 @@
 import { t } from "./i18n";
-import type { GoogleSession, User } from "./account";
+import type { GoogleSession } from "./account";
 import { useState, useEffect, useRef } from "react";
 import { stateSchema, type State } from "./domain";
-import { appPath, APP_BASE, sessionKey } from "./deployment";
+import { appPath, sessionKey } from "./deployment";
+import {
+  readStoredAuth,
+  restoreRememberedAuth,
+  saveAuth,
+  type Auth,
+} from "./auth-storage";
 import {
   load,
   hasStoredSnapshot,
@@ -20,25 +26,10 @@ import {
   resolveRecord,
 } from "./sync-model";
 import type { SyncResponse } from "./records";
-const AUTH_KEY = "compass-auth:" + APP_BASE;
-interface Auth {
-  token: string;
-  id: string;
-  name: string;
-  remember: boolean;
-  accountId?: string;
-  user?: User;
-  expiresAt?: number;
-}
 function initialAuth(): Auth {
   try {
-    const stored =
-      localStorage.getItem(AUTH_KEY) ?? sessionStorage.getItem(AUTH_KEY);
-    if (stored) {
-      const value = JSON.parse(stored);
-      if (typeof value.token === "string" && typeof value.id === "string")
-        return value;
-    }
+    const stored = readStoredAuth();
+    if (stored) return stored;
     return {
       token: sessionStorage.getItem(sessionKey) ?? "",
       id: crypto.randomUUID(),
@@ -56,7 +47,7 @@ function initialAuth(): Auth {
       token: "",
       id: crypto.randomUUID(),
       name: t("我的设备"),
-      remember: false,
+      remember: true,
     };
   }
 }
@@ -84,18 +75,11 @@ export function useCompass() {
   function rememberAuth(value: Auth) {
     authRef.current = value;
     setAuth(value);
-    try {
-      localStorage.removeItem(AUTH_KEY);
-      sessionStorage.removeItem(AUTH_KEY);
-      sessionStorage.removeItem(sessionKey);
-      (value.remember ? localStorage : sessionStorage).setItem(
-        AUTH_KEY,
-        JSON.stringify(value),
-      );
-    } catch {
+    void saveAuth(value).catch(() => {
       setMessage("设备登录信息无法持久保存，本次会话仍可使用。");
-    }
+    });
   }
+
   function persist(value: Snapshot, announce = false) {
     const accountId = authRef.current.accountId;
     queue.current = queue.current.then(async () => {
@@ -247,7 +231,24 @@ export function useCompass() {
   useEffect(() => {
     alive.current = true;
     void (async () => {
+      if (!authRef.current.token && !readStoredAuth()) {
+        try {
+          const restored = await restoreRememberedAuth();
+          if (restored && alive.current && !authRef.current.token) {
+            rememberAuth(restored);
+            setDeviceName(restored.name);
+            setRemember(restored.remember);
+          }
+        } catch {}
+      }
       const current = authRef.current;
+      if (current.token && current.remember) {
+        try {
+          await saveAuth(current);
+        } catch {
+          setMessage("设备登录信息无法持久保存，本次会话仍可使用。");
+        }
+      }
       if (!current.token && !current.accountId && !(await hasStoredSnapshot()))
         rememberAuth({ ...current, accountId: "guest" });
       return load(authRef.current.accountId);
