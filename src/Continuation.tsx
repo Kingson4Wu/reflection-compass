@@ -16,7 +16,7 @@ export function Continuation({
       <ul>
         {choices.map((choice) => (
           <li key={choice.id}>
-            <span>{choice.text}</span>
+            <span className="selectable-text">{choice.text}</span>
             <button
               aria-label={t(`继续：${choice.text}`)}
               onClick={() => onAdopt(choice.id, choice.text)}

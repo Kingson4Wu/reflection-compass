@@ -174,7 +174,7 @@ export function GoogleLogin({
           </span>
           <div>
             <strong>{identity.name || t("个人账号")}</strong>
-            <small>{identity.email}</small>
+            <small className="selectable-text">{identity.email}</small>
           </div>
           {identity.role === "admin" && (
             <span className="account-role">{t("管理员")}</span>
@@ -211,7 +211,11 @@ export function GoogleLogin({
       )}
       <div ref={button} />
       {busy && <p role="status">{t("正在处理登录…")}</p>}
-      {error && <p role="alert">{t(error)}</p>}
+      {error && (
+        <p role="alert" className="selectable-text">
+          {t(error)}
+        </p>
+      )}
     </div>
   );
 }

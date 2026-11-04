@@ -90,6 +90,10 @@ Read [architecture](ARCHITECTURE.md) before changing record keys, merge rules, a
 
 Keep deployment configuration, secrets, and tests separate. A dry run proves packaging, not real Google access, push display, or D1 permissions. Use a fresh guest context for public-page checks; production mutation tests require an intentionally disposable account or instance.
 
+## Text selection
+
+App chrome (navigation, buttons, row previews, labels, sheet titles, and disclosure headings) does not allow text selection or the iOS long-press callout. Text inputs and editors retain native selection and editing menus. Mark readable personal content and copyable diagnostics with `selectable-text` on the text element, rather than on a container that also contains controls. Keep saved actions, reflections, weekly notes, continuation text, conflict versions, and account email addresses copyable. Do not intercept clipboard, context-menu, or selection events globally.
+
 ## Manual acceptance
 
 For mobile interaction changes, test the actual installed iPhone app: keyboard, safe areas, scroll, dialogs, and VoiceOver. For notification changes, separately check permission, closed-app lock-screen delivery, notification links, Focus behavior, and permission recovery. A mocked push service or automated WebKit run cannot establish those operating-system results.

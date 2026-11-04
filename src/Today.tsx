@@ -105,7 +105,20 @@ export function Today({
                     setFeedback("");
                   }}
                 />
-                <span className={a.done ? "done" : ""}>{a.text}</span>
+                <span
+                  className={`selectable-text${a.done ? " done" : ""}`}
+                  onClick={(event) => {
+                    const selection = window.getSelection();
+                    // Selecting the label's text must not activate its checkbox.
+                    if (
+                      selection?.toString() &&
+                      selection.containsNode(event.currentTarget, true)
+                    )
+                      event.preventDefault();
+                  }}
+                >
+                  {a.text}
+                </span>
               </label>
               <button
                 className="action-edit"

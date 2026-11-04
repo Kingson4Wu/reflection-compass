@@ -135,7 +135,11 @@ export function DeviceSettings({
           {t("刷新设备列表")}
         </button>
       </div>
-      {feedback && <p role="status">{t(feedback)}</p>}
+      {feedback && (
+        <p role="status" className="selectable-text">
+          {t(feedback)}
+        </p>
+      )}
       {list?.devices.map((device) => (
         <div className="device-row" key={device.id}>
           <div>
@@ -387,7 +391,11 @@ export function BackupSettings({
           {t("撤销上次本机导入")}
         </button>
       )}
-      {feedback && <p role="status">{t(feedback)}</p>}
+      {feedback && (
+        <p role="status" className="selectable-text">
+          {t(feedback)}
+        </p>
+      )}
       {token && (
         <details className="settings-disclosure cloud-backups">
           <summary>{t("云端恢复点")}</summary>

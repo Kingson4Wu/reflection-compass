@@ -86,11 +86,17 @@ export function MemberSettings({ token }: { token: string }) {
           {t("创建邀请")}
         </button>
       </form>
-      {message && <p role="status">{t(message)}</p>}
+      {message && (
+        <p role="status" className="selectable-text">
+          {t(message)}
+        </p>
+      )}
       {members.map((member) => (
         <div className="device-row" key={member.id}>
           <div>
-            <strong>{member.email ?? t("尚未绑定 Google 的管理员")}</strong>
+            <strong className={member.email ? "selectable-text" : undefined}>
+              {member.email ?? t("尚未绑定 Google 的管理员")}
+            </strong>
             <p className="hint">
               {member.seat === 1
                 ? t("管理员")

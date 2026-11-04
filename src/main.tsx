@@ -390,7 +390,7 @@ function App() {
         >
           {message && (
             <div role="status" className="notice">
-              {t(message)}
+              <span className="selectable-text">{t(message)}</span>
               <button aria-label={t("关闭提示")} onClick={() => setMessage("")}>
                 ×
               </button>
@@ -502,17 +502,25 @@ function App() {
                       <h3>{date}</h3>
                       <ul>
                         {d.actions.map((a) => (
-                          <li key={a.id}>
+                          <li key={a.id} className="selectable-text">
                             {a.done ? "✓" : "○"} {a.text}
                           </li>
                         ))}
                       </ul>
                       {d.reflections.map((r) => (
                         <div className="reflection-entry" key={r.id}>
-                          <strong>{questionText(r.question, language)}</strong>
-                          <p>{r.skipped ? t("本次跳过") : r.answer}</p>
+                          <strong className="selectable-text">
+                            {questionText(r.question, language)}
+                          </strong>
+                          <p
+                            className={
+                              r.skipped ? undefined : "selectable-text"
+                            }
+                          >
+                            {r.skipped ? t("本次跳过") : r.answer}
+                          </p>
                           {r.next && (
-                            <p>
+                            <p className="selectable-text">
                               {t("下一步：")}
                               {r.next}
                             </p>
@@ -544,19 +552,19 @@ function App() {
                         </div>
                       ))}
                       {d.evening.worked && (
-                        <p>
+                        <p className="selectable-text">
                           {t("有效行动：")}
                           {d.evening.worked}
                         </p>
                       )}
                       {d.evening.obstacle && (
-                        <p>
+                        <p className="selectable-text">
                           {t("障碍：")}
                           {d.evening.obstacle}
                         </p>
                       )}
                       {d.evening.next && (
-                        <p>
+                        <p className="selectable-text">
                           {t("明天调整：")}
                           {d.evening.next}
                         </p>
@@ -585,7 +593,7 @@ function App() {
                       <h3>
                         {date} {t("· 周回顾")}
                       </h3>
-                      <p className="preserve">{text}</p>
+                      <p className="preserve selectable-text">{text}</p>
                     </section>
                   ))}
               </>
@@ -824,7 +832,7 @@ function App() {
                     </button>
                   )}
                   {pushFeedback && (
-                    <p role="status" className="hint">
+                    <p role="status" className="hint selectable-text">
                       {t(pushFeedback)}
                     </p>
                   )}
@@ -869,7 +877,7 @@ function App() {
                       data-testid="push-feedback"
                       role="status"
                       aria-live="polite"
-                      className="notice"
+                      className="notice selectable-text"
                     >
                       {t(pushFeedback)}
                     </div>

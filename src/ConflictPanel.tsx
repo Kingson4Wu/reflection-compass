@@ -48,11 +48,11 @@ function ConflictCard({
       <div className="conflict-versions">
         <div>
           <strong>{t("这台设备的版本")}</strong>
-          <pre>{display(conflict.local)}</pre>
+          <pre className="selectable-text">{display(conflict.local)}</pre>
         </div>
         <div>
           <strong>{t("云端版本")}</strong>
-          <pre>{display(conflict.remote)}</pre>
+          <pre className="selectable-text">{display(conflict.remote)}</pre>
         </div>
       </div>
       {showMerge && (

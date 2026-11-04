@@ -18,6 +18,31 @@
 body {
   margin: 0;
 }
+body,
+dialog {
+  /* App chrome should not grow selection handles or a long-press copy menu. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* Keep native editing and deliberate copying of personal/read-only content. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+    [type="time"]
+  ),
+textarea,
+[contenteditable="true"],
+[contenteditable="plaintext-only"],
+[contenteditable=""],
+.selectable-text,
+a[href]:not(.brand) {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+img,
+svg {
+  -webkit-user-drag: none;
+}
 button,
 input,
 textarea,

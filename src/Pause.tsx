@@ -69,7 +69,9 @@ export function Pause({
         value={questionText(question, getLanguage())}
         onChange={setQuestion}
       />
-      <h2 className="question">{questionText(question, getLanguage())}</h2>
+      <h2 className="question selectable-text">
+        {questionText(question, getLanguage())}
+      </h2>
       <p className="pause-caption">{t("想一下就好，也可以什么都不写。")}</p>
       <button className="primary pause-return" onClick={onLeave}>
         {t("回到今天")}
